@@ -29,6 +29,11 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev]"
+      - name: Cache SEBI documents
+        uses: actions/cache@v4
+        with:
+          path: data/docs
+          key: sebi-docs-${{ hashFiles('data/sources.json') }}
       - run: fundlens setup
       - run: python -m eval.run_eval --retrieval-only
       - name: Gate on hybrid recall@5

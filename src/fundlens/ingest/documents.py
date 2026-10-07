@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -73,17 +74,32 @@ def chunk_document(doc_id: str, title: str, pages: list[str], size: int = 180, o
     return chunks
 
 
+def _fetch_pdf(client: httpx.Client, url: str, attempts: int = 4) -> bytes:
+    """Government servers drop long transfers now and then; retry with backoff and reject truncated files."""
+    last: Exception | None = None
+    for i in range(attempts):
+        try:
+            resp = client.get(url)
+            resp.raise_for_status()
+            body = resp.content
+            if not body.startswith(b"%PDF") or b"%%EOF" not in body[-2048:]:
+                raise ValueError(f"incomplete PDF from {url} ({len(body)} bytes)")
+            return body
+        except (httpx.HTTPError, ValueError) as e:
+            last = e
+            time.sleep(2**i)
+    raise RuntimeError(f"could not download {url} after {attempts} attempts: {last}")
+
+
 def download(settings: Settings) -> list[Path]:
     sources = json.loads(settings.sources_file.read_text())["documents"]
     settings.docs_dir.mkdir(parents=True, exist_ok=True)
     paths = []
-    with httpx.Client(timeout=60, follow_redirects=True, headers={"User-Agent": "FundLens/0.1 (research)"}) as client:
+    with httpx.Client(timeout=120, follow_redirects=True, headers={"User-Agent": "FundLens/0.1 (research)"}) as client:
         for src in sources:
             path = settings.docs_dir / f"{src['id']}.pdf"
             if not path.exists():
-                resp = client.get(src["url"])
-                resp.raise_for_status()
-                path.write_bytes(resp.content)
+                path.write_bytes(_fetch_pdf(client, src["url"]))
             paths.append(path)
     return paths
 
