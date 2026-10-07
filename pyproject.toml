@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fundlens"
+version = "0.1.0"
+description = "Grounded research copilot for Indian mutual funds: hybrid RAG over SEBI documents, a tool-calling agent over NAV data, guardrails and an evaluation harness."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Deon Menezes" }]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "httpx>=0.27",
+    "pydantic>=2.6",
+    "pypdf>=4.2",
+    "fastembed>=0.3",
+    "rank-bm25>=0.2.2",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+fundlens = "fundlens.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+fundlens = ["web/*"]
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests", "eval"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]

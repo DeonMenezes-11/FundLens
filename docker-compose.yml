@@ -1,0 +1,14 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes: ["ollama:/root/.ollama"]
+    ports: ["11434:11434"]
+  api:
+    build: .
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      FUNDLENS_MODEL: ${FUNDLENS_MODEL:-llama3.2:3b}
+    ports: ["8000:8000"]
+    depends_on: [ollama]
+volumes:
+  ollama: {}

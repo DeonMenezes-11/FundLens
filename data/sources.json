@@ -1,0 +1,39 @@
+{
+  "documents": [
+    {
+      "id": "sebi_categorization_2017",
+      "title": "SEBI circular: Categorization and Rationalization of Mutual Fund Schemes (Oct 2017)",
+      "url": "https://www.sebi.gov.in/sebi_data/attachdocs/oct-2017/1509103633344.pdf"
+    },
+    {
+      "id": "sebi_ter_2018",
+      "title": "SEBI circular: Total Expense Ratio (TER) and Performance Disclosure for Mutual Funds (Oct 2018)",
+      "url": "https://www.sebi.gov.in/sebi_data/attachdocs/oct-2018/1540211912091.pdf"
+    },
+    {
+      "id": "sebi_investor_faq_2024",
+      "title": "SEBI: FAQs for Mutual Fund Investors (updated Aug 2024)",
+      "url": "https://www.sebi.gov.in/sebi_data/faqfiles/sep-2024/1727242783639.pdf"
+    },
+    {
+      "id": "icici_ultra_short_term_sid",
+      "title": "Scheme Information Document: ICICI Prudential Ultra Short Term Fund (filed with SEBI, Jun 2024)",
+      "url": "https://www.sebi.gov.in/sebi_data/mutualfundfile/jun-2024/1719479956241.pdf"
+    }
+  ],
+  "schemes": [
+    {"code": 120586, "short": "Large Cap"},
+    {"code": 120596, "short": "Large & Mid Cap"},
+    {"code": 120323, "short": "Value"},
+    {"code": 120594, "short": "Technology"},
+    {"code": 120592, "short": "ELSS Tax Saver"},
+    {"code": 120377, "short": "Balanced Advantage"},
+    {"code": 120684, "short": "Nifty Next 50 Index"},
+    {"code": 149389, "short": "Nifty Midcap 150 Index"},
+    {"code": 149283, "short": "Nifty Smallcap 250 Index"},
+    {"code": 120685, "short": "Gold ETF FOF"},
+    {"code": 120676, "short": "Ultra Short Term"},
+    {"code": 120692, "short": "Corporate Bond"},
+    {"code": 120197, "short": "Liquid"}
+  ]
+}

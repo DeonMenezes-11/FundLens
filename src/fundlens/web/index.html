@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FundLens</title>
+<style>
+  :root { --bg:#f6f7fb; --surface:#fff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0; --accent:#b02a30; --soft:#fdf2f2; --good:#047857; --warn:#b45309; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0b1020; --surface:#131a2b; --text:#e2e8f0; --muted:#94a3b8; --border:#25304a; --accent:#f87171; --soft:#2a1416; --good:#34d399; --warn:#fbbf24; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+  header { padding:16px 24px; border-bottom:1px solid var(--border); background:var(--surface); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; } header p { margin:0; color:var(--muted); font-size:13px; }
+  #metrics { font-size:12px; color:var(--muted); }
+  main { max-width:1100px; margin:0 auto; padding:20px 24px; display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  form { display:flex; gap:8px; }
+  input { flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font:inherit; background:var(--surface); color:var(--text); }
+  button { padding:10px 16px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .examples { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 0; }
+  .examples button { background:var(--soft); color:var(--accent); font-weight:500; font-size:12px; padding:4px 10px; }
+  .turn { margin-top:16px; }
+  .q { font-weight:600; }
+  .a { margin-top:6px; white-space:pre-wrap; }
+  .cite { display:inline-block; font-size:11px; padding:0 6px; margin:0 2px; border-radius:6px; background:var(--soft); color:var(--accent); cursor:pointer; border:0; font-weight:600; }
+  .meta { font-size:12px; color:var(--muted); margin-top:6px; }
+  .flag { display:inline-block; font-size:11px; padding:0 6px; border-radius:6px; background:var(--bg); border:1px solid var(--border); margin-right:4px; }
+  .refused { color:var(--warn); }
+  aside h2 { font-size:14px; margin:0 0 8px; }
+  .src { font-size:13px; border-top:1px solid var(--border); padding:8px 0; }
+  .src b { color:var(--accent); font-size:12px; }
+  .src pre { white-space:pre-wrap; font:12px ui-monospace, monospace; margin:4px 0 0; color:var(--muted); max-height:180px; overflow:auto; }
+  ol.trace { padding-left:18px; font-size:12px; color:var(--muted); }
+  .disclaimer { font-size:12px; color:var(--muted); margin-top:16px; }
+  @media (max-width:860px) { main { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>FundLens</h1><p>Grounded answers on Indian mutual funds, from SEBI documents and NAV data</p></div>
+  <div id="metrics"></div>
+</header>
+<main>
+  <section class="panel">
+    <form id="f"><input id="q" placeholder="Ask about a fund, a SEBI rule or historical returns" autocomplete="off" required /><button id="go">Ask</button></form>
+    <div class="examples" id="ex"></div>
+    <div id="log"></div>
+    <p class="disclaimer">Not investment advice. Answers come only from public SEBI documents and historical NAVs, and every claim links to its source.</p>
+  </section>
+  <aside class="panel">
+    <h2>Sources & trace</h2>
+    <div id="side"><p class="meta">Click a citation to see the exact passage or data it came from.</p></div>
+  </aside>
+</main>
+<script>
+const EXAMPLES = [
+  "What is the 3-year CAGR of ICICI Prudential Large Cap Fund?",
+  "What must a large cap fund invest in under SEBI rules?",
+  "What is the exit load of ICICI Prudential Ultra Short Term Fund?",
+  "What is the maximum drawdown of the Technology fund over 5 years?",
+  "What is a riskometer?",
+];
+const $ = (id) => document.getElementById(id);
+let last = null;
+
+for (const e of EXAMPLES) {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = e;
+  b.onclick = () => { $("q").value = e; ask(); }; $("ex").appendChild(b);
+}
+
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+// Render the answer as text nodes; citations become buttons. No innerHTML with model output.
+function renderAnswer(text, container) {
+  const re = /\[([^\[\]]+)\]/g; let i = 0, m;
+  while ((m = re.exec(text))) {
+    container.appendChild(document.createTextNode(text.slice(i, m.index)));
+    const id = m[1]; // copy: the loop variable m is null by the time the button is clicked
+    const b = el("button", "cite", "source"); b.title = id; b.onclick = () => showSource(id);
+    container.appendChild(b); i = m.index + m[0].length;
+  }
+  container.appendChild(document.createTextNode(text.slice(i)));
+}
+
+function showSource(id) {
+  const side = $("side"); side.replaceChildren();
+  if (!last) return;
+  const ev = last.evidence[id];
+  const box = el("div", "src"); box.appendChild(el("b", null, id));
+  if (ev && ev.text) { box.appendChild(el("div", null, `${ev.source}, page ${ev.page}`)); box.appendChild(el("pre", null, ev.text)); }
+  else box.appendChild(el("pre", null, JSON.stringify(ev, null, 2)));
+  side.appendChild(box);
+  renderTrace(side);
+}
+
+function renderTrace(side) {
+  side.appendChild(el("h2", null, "Agent trace"));
+  const ol = el("ol", "trace");
+  for (const s of last.steps) {
+    const extra = s.kind === "tool" ? ` ${JSON.stringify(s.detail.args)}${s.detail.ok ? "" : " ✗ " + s.detail.error}` : s.kind === "llm" ? ` → ${s.detail.tool_calls.join(", ") || "answer"}` : "";
+    ol.appendChild(el("li", null, `${s.kind}: ${s.name}${extra} (${Math.round(s.ms)} ms)`));
+  }
+  side.appendChild(ol);
+}
+
+async function ask(ev) {
+  if (ev) ev.preventDefault();
+  const q = $("q").value.trim(); if (!q) return;
+  $("go").disabled = true;
+  const turn = el("div", "turn"); turn.appendChild(el("div", "q", q));
+  const a = el("div", "a", "Thinking…"); turn.appendChild(a); $("log").prepend(turn);
+  try {
+    const r = await fetch("ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    last = data; a.textContent = "";
+    if (data.refused) a.classList.add("refused");
+    renderAnswer(data.answer, a);
+    const meta = el("div", "meta", `${(data.latency_ms / 1000).toFixed(1)} s · ${data.prompt_tokens + data.completion_tokens} tokens · tools: ${data.tools_used.join(", ") || "none"} `);
+    for (const f of data.flags) meta.appendChild(el("span", "flag", f));
+    turn.appendChild(meta);
+    const side = $("side"); side.replaceChildren(el("p", "meta", "Click a citation to see its source.")); renderTrace(side);
+    loadMetrics();
+  } catch (e) { a.textContent = "Error: " + e.message; }
+  finally { $("go").disabled = false; }
+}
+
+async function loadMetrics() {
+  try {
+    const m = await (await fetch("metrics")).json();
+    if (m.requests) $("metrics").textContent = `${m.requests} requests · p50 ${(m.latency_ms_p50/1000).toFixed(1)} s · p95 ${(m.latency_ms_p95/1000).toFixed(1)} s · cited ${(m.cited_answer_rate*100).toFixed(0)}%`;
+  } catch {}
+}
+$("f").addEventListener("submit", ask);
+loadMetrics();
+</script>
+</body>
+</html>
